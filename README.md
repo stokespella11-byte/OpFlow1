@@ -1,141 +1,152 @@
-# OpFlow1
+# OpFlow - Options Trading Automation
 
-Option execute to dividend savings - An automated options trading system for bull put spreads.
-
-## Overview
-
-OpFlow1 is a Python-based options trading automation tool that uses LangChain and the Public.com API to identify and execute high-yield bull put spread strategies.
+Automated bull put spread options trading strategy for dividend savings using Public.com's API and LangChain.
 
 ## Features
 
-- **Account Capital Verification**: Check available uninvested cash balance
-- **Options Chain Analysis**: Scan and filter options chains for optimal spreads
-- **Automated Execution**: Execute bull put vertical spreads directly via API
-- **Yield Calculation**: Compute annualized returns on identified positions
+- **Account Verification**: Check available uninvested cash balance
+- **Options Scanning**: Identify high-yield put spreads 14-21 days out at safe -0.15 delta
+- **Automated Execution**: Route multi-leg bull put spreads directly to Public.com
 
-## Setup
-
-### Prerequisites
+## Prerequisites
 
 - Python 3.8+
 - Public.com account with API access
-- Valid API credentials (secret key and account ID)
+- API credentials (secret key and account ID)
 
-### Installation
+## Installation
 
-1. Clone the repository:
+### 1. Clone the repository
 ```bash
 git clone https://github.com/stokespella11-byte/OpFlow1.git
 cd OpFlow1
 ```
 
-2. Create a virtual environment:
+### 2. Create a virtual environment
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install dependencies:
+### 3. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Configure environment variables:
+### 4. Set up environment variables
 ```bash
 cp .env.example .env
-# Edit .env with your Public.com API credentials
+# Edit .env with your Public.com credentials
+```
+
+Add your Public.com API credentials to `.env`:
+```
+PUBLIC_COM_SECRET=your_secret_key_here
+PUBLIC_COM_ACCOUNT_ID=your_account_id_here
 ```
 
 ## Usage
 
-### Import and Use the Tools
+### Run the main script
+```bash
+python main.py
+```
 
+This will:
+1. Verify your account capital
+2. Scan SPY, QQQ, and IWM options for high-yield spreads
+3. Display potential trade opportunities
+
+### Use as a module
 ```python
-from options_tools import verify_account_capital, fetch_high_yield_chain, execute_bull_put_spread
+from opflow.tools import verify_account_capital, fetch_high_yield_chain
 
-# Check available capital
+# Check account balance
 capital = verify_account_capital()
-print(f"Available Capital: ${capital}")
+print(f"Available: ${capital}")
 
-# Scan for high-yield spreads
-chain_data = fetch_high_yield_chain("AAPL")
-print(chain_data)
-
-# Execute a spread
-result = execute_bull_put_spread("AAPL", short_strike=180.0, long_strike=177.0)
+# Scan options chain
+result = fetch_high_yield_chain("QQQ")
 print(result)
 ```
 
-## Tools Reference
+## Tools Available
 
-### `verify_account_capital() -> float`
-Queries Public.com API to return the available uninvested cash balance.
+### `verify_account_capital()`
+Returns the available uninvested cash balance from your account.
 
-**Returns**: Float value of uninvested capital
+**Returns:** `float` - Available capital
 
----
+### `fetch_high_yield_chain(ticker: str)`
+Scans the options chain for the specified ticker between 14-21 days to expiration.
 
-### `fetch_high_yield_chain(ticker: str) -> str`
-Scans the options chain for high-yield put spreads within 14-21 days.
+**Parameters:**
+- `ticker` (str): Stock ticker symbol (e.g., "SPY", "QQQ")
 
-**Parameters**:
-- `ticker` (str): Stock ticker symbol (e.g., "AAPL")
+**Returns:** `str` - Formatted spread opportunity details
 
-**Returns**: Formatted string with position details including:
-- Short strike price and delta
-- Long strike price
-- Estimated credit
-- Required capital
-- Estimated annualized yield
+### `execute_bull_put_spread(ticker: str, short_strike: float, long_strike: float)`
+Executes a bull put vertical spread on Public.com.
 
----
-
-### `execute_bull_put_spread(ticker: str, short_strike: float, long_strike: float) -> str`
-Executes a multi-leg bull put vertical spread order.
-
-**Parameters**:
+**Parameters:**
 - `ticker` (str): Stock ticker symbol
-- `short_strike` (float): Strike price for the short put
-- `long_strike` (float): Strike price for the long put
+- `short_strike` (float): Strike price to sell
+- `long_strike` (float): Strike price to buy (protection)
 
-**Returns**: Order confirmation with order ID or error message
+**Returns:** `str` - Order confirmation or error message
+
+## Strategy Details
+
+**Bull Put Spread:**
+- Sells an out-of-the-money (OTM) put
+- Buys a protective put 3 strikes lower
+- Targets -0.15 delta for defined risk
+- 14-21 days to expiration for optimal decay
+- Calculates annualized yield based on margin requirement
+
+## Safety Considerations
+
+⚠️ **Important:**
+- This is an automated trading system. Test thoroughly before live trading
+- Ensure you understand the risks of options trading
+- Start with small position sizes
+- Monitor your account regularly
+- Have stop-loss procedures in place
+- **Never commit credentials to version control**
 
 ## Configuration
 
-### Key Parameters
+Edit `opflow/tools.py` to adjust:
+- Expiration date range (currently 14-21 days)
+- Target delta (currently -0.15)
+- Strike width (currently 3 points)
+- Margin calculation (currently $300)
 
-- **Delta Target**: -0.15 (safe boundary for short puts)
-- **Spread Width**: 3 strike points
-- **DTE Range**: 14-21 days to expiration
-- **Margin Lock**: Base $300 (adjusted for credit received)
-- **Order Duration**: GTC (Good-Till-Canceled)
-- **Order Price**: Mid-price
+## Troubleshooting
 
-## Important Notes
-
-⚠️ **Risk Warning**: Options trading involves significant risk. This tool is designed for experienced traders.
-
-- Always verify API credentials are correct before execution
-- Test with paper trading first
-- Monitor position sizing and account equity
-- Ensure margin requirements are met before execution
-- Public.com API credentials should be kept secure in `.env` file
-
-## Environment Variables
-
-Required environment variables in `.env`:
-
-```
-PUBLIC_COM_SECRET=your_secret_key
-PUBLIC_COM_ACCOUNT_ID=your_account_id
+### ImportError: No module named 'publicdotcom_py'
+```bash
+pip install --upgrade publicdotcom-py
 ```
 
-Never commit `.env` to version control.
+### "Error gathering options market data"
+- Verify your API credentials are correct
+- Check that the market is open
+- Ensure the ticker symbol is valid
+
+### "Could not locate a matching 3-point wide protective put"
+- The ticker may not have options available
+- Try a different expiration range
+- Try a more liquid underlying (SPY, QQQ, etc.)
 
 ## License
 
-This project is provided as-is. Use at your own risk.
+MIT
 
 ## Support
 
-For issues with the Public.com API, refer to their official documentation.
+For issues or questions, please open a GitHub issue.
+
+---
+
+**Disclaimer:** This tool is for educational purposes. Options trading involves significant risk. Past performance does not guarantee future results. Trade at your own risk.
