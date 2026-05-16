@@ -1,0 +1,3 @@
+langchain
+publicdotcom-py
+python-dotenv
